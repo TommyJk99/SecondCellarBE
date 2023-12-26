@@ -17,14 +17,6 @@ const UserSchema = new Schema({
       maxlength: [50, "Surname must be at most 50 characters long!"],
       trim: true,
    },
-   //now i need a virtual property to get the full name
-   fullName: {
-      type: String,
-      trim: true,
-      get: function () {
-         return `${this.name} ${this.surname}`
-      },
-   },
    email: {
       type: String,
       required: [true, "Email is required!"],
