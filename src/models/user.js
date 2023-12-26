@@ -1,8 +1,6 @@
-import mongoose from "mongoose"
+import { mongoose, Schema } from "mongoose"
 import bcrypt from "bcrypt"
 import validator from "validator"
-
-const Schema = mongoose.Schema
 
 const UserSchema = new Schema({
    name: {
@@ -18,6 +16,14 @@ const UserSchema = new Schema({
       minlength: [3, "Surname must be at least 3 characters long!"],
       maxlength: [50, "Surname must be at most 50 characters long!"],
       trim: true,
+   },
+   //now i need a virtual property to get the full name
+   fullName: {
+      type: String,
+      trim: true,
+      get: function () {
+         return `${this.name} ${this.surname}`
+      },
    },
    email: {
       type: String,
@@ -61,6 +67,16 @@ const UserSchema = new Schema({
    cellar: [{ type: Schema.Types.ObjectId, ref: "Cellar" }],
    transactions: [{ type: Schema.Types.ObjectId, ref: "Transaction" }],
    favorites: [{ type: Schema.Types.ObjectId, ref: "Wine" }],
+
+   createdAt: {
+      type: Date,
+      default: Date.now,
+   },
+
+   updatedAt: {
+      type: Date,
+      default: Date.now,
+   },
 })
 
 //this method will run before saving the document into the database if the password is modified
@@ -72,4 +88,4 @@ UserSchema.pre("save", async function (next) {
    next()
 })
 
-export const User = mongoose.model("User", UserSchema)
+export const User = mongoose.model("User", UserSchema, "user")
