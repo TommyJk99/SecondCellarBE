@@ -1,28 +1,26 @@
 import { mongoose, Schema } from "mongoose"
 import bcrypt from "bcrypt"
-import validator from "validator"
 
 const UserSchema = new Schema({
    name: {
       type: String,
       required: [true, "Name is required!"],
-      minlength: [3, "Name must be at least 3 characters long!"],
-      maxlength: [50, "Name must be at most 50 characters long!"],
+      minlength: [2, "Name must be at least 2 characters long!"],
+      maxlength: [40, "Name must be at most 40 characters long!"],
       trim: true,
    },
    surname: {
       type: String,
       required: [true, "Surname is required!"],
-      minlength: [3, "Surname must be at least 3 characters long!"],
-      maxlength: [50, "Surname must be at most 50 characters long!"],
+      minlength: [2, "Surname must be at least 2 characters long!"],
+      maxlength: [40, "Surname must be at most 40 characters long!"],
       trim: true,
    },
    email: {
       type: String,
       required: [true, "Email is required!"],
-      unique: true,
+      unique: true, //this will create an index in the database that will not allow duplicate values for this field
       trim: true,
-      validate: [validator.isEmail, "Please provide a valid email address"],
    },
    password: {
       type: String,

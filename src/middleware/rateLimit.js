@@ -1,8 +1,9 @@
 import rateLimit from "express-rate-limit"
 
+//this is a middleware that limits the number of requests a user can make to the server
 export const limiter = rateLimit({
-   windowMs: 15 * 60 * 1000, // 15 minuti
-   max: 50, // limite di 50 richieste per finestra temporale per IP
-   standardHeaders: true, // Restituisci le informazioni sui limiti di rate nel headers
-   legacyHeaders: false, // Disabilita l' header 'X-RateLimit-*'
+   windowMs: 15 * 60 * 1000, // = 15 minutes
+   max: 50,
+   standardHeaders: true,
+   legacyHeaders: false,
 })
