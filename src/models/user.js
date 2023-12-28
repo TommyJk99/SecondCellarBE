@@ -5,14 +5,14 @@ const UserSchema = new Schema({
    name: {
       type: String,
       required: [true, "Name is required!"],
-      minlength: [2, "Name must be at least 2 characters long!"],
+      minlength: [1, "Name must be at least 1 characters long!"],
       maxlength: [40, "Name must be at most 40 characters long!"],
       trim: true,
    },
    surname: {
       type: String,
       required: [true, "Surname is required!"],
-      minlength: [2, "Surname must be at least 2 characters long!"],
+      minlength: [1, "Surname must be at least 1 characters long!"],
       maxlength: [40, "Surname must be at most 40 characters long!"],
       trim: true,
    },
@@ -30,30 +30,30 @@ const UserSchema = new Schema({
    address: {
       street: {
          type: String,
-         required: [true, "Street is required!"],
+         // required: [true, "Street is required!"],
          trim: true,
       },
       city: {
          type: String,
-         required: [true, "City is required!"],
+         // required: [true, "City is required!"],
          trim: true,
       },
       postalCode: {
          type: String,
-         required: [true, "Postal code is required!"],
+         // required: [true, "Postal code is required!"],
          trim: true,
       },
       country: {
          type: String,
-         required: [true, "Country is required!"],
+         // required: [true, "Country is required!"],
          trim: true,
       },
    },
-   role: {
-      type: String,
-      enum: ["admin", "user"],
-      default: "user",
-   },
+   // role: {
+   //    type: String,
+   //    enum: ["admin", "user"],
+   //    default: "user",
+   // },
    cellar: [{ type: Schema.Types.ObjectId, ref: "Cellar" }],
    transactions: [{ type: Schema.Types.ObjectId, ref: "Transaction" }],
    favorites: [{ type: Schema.Types.ObjectId, ref: "Wine" }],
