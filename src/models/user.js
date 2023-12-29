@@ -49,14 +49,18 @@ const UserSchema = new Schema({
          trim: true,
       },
    },
-   // role: {
-   //    type: String,
-   //    enum: ["admin", "user"],
-   //    default: "user",
-   // },
+   role: {
+      type: String,
+      enum: ["admin", "user"],
+      default: "user",
+   },
    cellar: [{ type: Schema.Types.ObjectId, ref: "Cellar" }],
    transactions: [{ type: Schema.Types.ObjectId, ref: "Transaction" }],
    favorites: [{ type: Schema.Types.ObjectId, ref: "Wine" }],
+
+   refreshToken: {
+      type: String,
+   },
 
    createdAt: {
       type: Date,

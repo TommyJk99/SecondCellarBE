@@ -1,15 +1,16 @@
+//ctrl + shift + p -> organize imports
+import bcrypt from "bcrypt"
+import cors from "cors"
 import express from "express"
 import list from "express-list-endpoints"
-import mongoose from "mongoose"
-import cors from "cors"
-import jwt from "jsonwebtoken"
-import { User } from "./models/user.js"
-import { genericErrorHandler } from "./middleware/genericErrorHandler.js"
-import checkJwt from "./middleware/checkJwt.js"
-import bcrypt from "bcrypt"
-import helmet from "helmet"
-import { limiter } from "./middleware/rateLimit.js"
 import { body, validationResult } from "express-validator"
+import helmet from "helmet"
+import mongoose from "mongoose"
+import checkJwt from "./middleware/checkJwt.js"
+import { genericErrorHandler } from "./middleware/genericErrorHandler.js"
+import { limiter } from "./middleware/rateLimit.js"
+import { User } from "./models/user.js"
+import generateTokens from "./services/generateTokens.js"
 
 const app = express()
 app.use(helmet())
@@ -33,18 +34,19 @@ app.post(
          .withMessage("Invalid password format"),
    ], //this controls the format of the email and password using express-validator
    async (req, res, next) => {
-      //this if statement checks if there are any errors in the validation
+      //this if statement checks if there are any errors using express-validator
       const errors = validationResult(req)
       if (!errors.isEmpty()) {
          return res.status(400).json({ errors: errors.array() })
       }
       try {
-         const newUser = await new User(req.body).save()
+         const newUser = await new User({ ...req.body, role: "user" }) //should i add also the other fields that the user is not permitted to change?
+         const { accessToken, refreshToken } = generateTokens(newUser._id)
 
-         const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-            expiresIn: "4h",
-         })
-         res.status(201).send({ token })
+         newUser.refreshToken = refreshToken
+         await newUser.save()
+
+         res.status(201).send({ accessToken, refreshToken })
       } catch (err) {
          next(err)
       }
@@ -66,13 +68,45 @@ app.post("/sign-in", limiter, async (req, res, next) => {
          return res.status(401).send({ error: "Invalid credentials!" })
       }
 
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-         expiresIn: "4h",
-      })
+      const { token: accessToken, refreshToken } = generateTokens(user._id)
 
-      res.status(200).send({ token })
+      //this is the new refresh token that will be saved in the database after the old one expires
+      user.refreshToken = refreshToken
+      await user.save()
+
+      res.status(200).send({ accessToken, refreshToken })
    } catch (err) {
       next(err)
+   }
+})
+
+//now I need to create a route for refreshing the access token
+//thist route will be called when i receive an error when trying to access a protected route
+//Should I implement an interceptor with axios?
+app.post("/refresh-token", limiter, async (req, res) => {
+   //remember to control if the limiter don't block the request
+   try {
+      const { refreshToken } = req.body
+      if (!refreshToken) {
+         return res.status(401).send({ error: "Refresh token is required" })
+      }
+
+      const { id } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+      const user = await User.findById(id)
+
+      if (!user || user.refreshToken !== refreshToken) {
+         return res.status(401).send({ error: "Invalid refresh token" })
+      }
+
+      const { accessToken, newRefreshToken } = generateTokens(id)
+      console.table({ accessToken, newRefreshToken, id })
+
+      user.refreshToken = newRefreshToken
+      await user.save()
+
+      res.send({ accessToken, newRefreshToken })
+   } catch (error) {
+      res.status(401).send({ error: "Invalid or expired refresh token" })
    }
 })
 
