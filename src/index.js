@@ -11,6 +11,7 @@ import { genericErrorHandler } from "./middleware/genericErrorHandler.js"
 import { limiter } from "./middleware/rateLimit.js"
 import { User } from "./models/user.js"
 import generateTokens from "./services/generateTokens.js"
+import jwt from "jsonwebtoken"
 
 const app = express()
 app.use(helmet())
@@ -21,6 +22,7 @@ app.use(cors())
 //the password is hashed before saving it to the database (from the user model)
 app.post(
    "/sign-up",
+   limiter,
    [
       body("email").isEmail().withMessage("Invalid email format"),
       body("password")
@@ -68,7 +70,7 @@ app.post("/sign-in", limiter, async (req, res, next) => {
          return res.status(401).send({ error: "Invalid credentials!" })
       }
 
-      const { token: accessToken, refreshToken } = generateTokens(user._id)
+      const { accessToken, refreshToken } = generateTokens(user._id)
 
       //this is the new refresh token that will be saved in the database after the old one expires
       user.refreshToken = refreshToken
@@ -83,35 +85,36 @@ app.post("/sign-in", limiter, async (req, res, next) => {
 //now I need to create a route for refreshing the access token
 //thist route will be called when i receive an error when trying to access a protected route
 //Should I implement an interceptor with axios?
-app.post("/refresh-token", limiter, async (req, res) => {
+app.post("/refresh-token", async (req, res, next) => {
    //remember to control if the limiter don't block the request
    try {
-      const { refreshToken } = req.body
-      if (!refreshToken) {
+      //refreshTokenDb is the refresh token that is saved in the database
+      const refreshTokenDb = req.body.refreshToken
+      if (!refreshTokenDb) {
          return res.status(401).send({ error: "Refresh token is required" })
       }
 
-      const { id } = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+      const { id } = jwt.verify(refreshTokenDb, process.env.REFRESH_TOKEN_SECRET)
       const user = await User.findById(id)
 
-      if (!user || user.refreshToken !== refreshToken) {
+      if (!user || user.refreshToken !== refreshTokenDb) {
          return res.status(401).send({ error: "Invalid refresh token" })
       }
 
-      const { accessToken, newRefreshToken } = generateTokens(id)
-      console.table({ accessToken, newRefreshToken, id })
+      const { accessToken, refreshToken } = generateTokens(id)
 
-      user.refreshToken = newRefreshToken
+      user.refreshToken = refreshToken
       await user.save()
 
-      res.send({ accessToken, newRefreshToken })
+      res.send({ accessToken, refreshToken })
    } catch (error) {
-      res.status(401).send({ error: "Invalid or expired refresh token" })
+      // res.status(401).send({ error: "Invalid or expired refresh token" })
+      next(error)
    }
 })
 
 //this route is for getting the user profile
-app.get("/me", checkJwt, async (req, res, next) => {
+app.get("/me", limiter, checkJwt, async (req, res, next) => {
    if (!req.user) {
       return res.status(404).send({ error: "User not found!" })
    }
