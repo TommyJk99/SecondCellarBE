@@ -12,11 +12,15 @@ import { limiter } from "./middleware/rateLimit.js"
 import { User } from "./models/user.js"
 import generateTokens from "./services/generateTokens.js"
 import jwt from "jsonwebtoken"
+import winesRouter from "./routes/winesRouter.js"
 
 const app = express()
 app.use(helmet())
 app.use(express.json())
 app.use(cors())
+
+//ROUTES
+app.use("wines", winesRouter)
 
 //this route is for registering a new user
 //the password is hashed before saving it to the database (from the user model)
@@ -85,7 +89,7 @@ app.post("/sign-in", limiter, async (req, res, next) => {
 //now I need to create a route for refreshing the access token
 //thist route will be called when i receive an error when trying to access a protected route
 //Should I implement an interceptor with axios?
-app.post("/refresh-token", async (req, res, next) => {
+app.post("/refresh-token", limiter, async (req, res) => {
    //remember to control if the limiter don't block the request
    try {
       //refreshTokenDb is the refresh token that is saved in the database
@@ -108,8 +112,7 @@ app.post("/refresh-token", async (req, res, next) => {
 
       res.send({ accessToken, refreshToken })
    } catch (error) {
-      // res.status(401).send({ error: "Invalid or expired refresh token" })
-      next(error)
+      res.status(401).send({ error: "Invalid or expired refresh token" })
    }
 })
 
