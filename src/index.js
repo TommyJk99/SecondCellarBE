@@ -20,7 +20,7 @@ app.use(express.json())
 app.use(cors())
 
 //ROUTES
-app.use("wines", winesRouter)
+app.use("/wines", winesRouter)
 
 //this route is for registering a new user
 //the password is hashed before saving it to the database (from the user model)
