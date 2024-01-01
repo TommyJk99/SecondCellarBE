@@ -1,13 +1,16 @@
 import express from "express"
 import { limiter } from "../middleware/rateLimit.js"
 import { Wine } from "../models/wine.js"
-import { query, validationResult } from "express-validator"
+import { query } from "express-validator"
+import validate from "../middleware/isValidationOk.js"
 
-//this shows all the wines in the database
 const wineRouter = express.Router()
 
+// this route returns all wines in the database efficiently paginated
+
+// this route searches for wines in the database using the query parameters (need other tests)
 wineRouter.get(
-   "/",
+   "/search",
    // im using express validator "query" to validate the query parameters
    [
       query("page").isInt({ min: 1 }).withMessage("Page must be a positive integer"),
@@ -20,14 +23,9 @@ wineRouter.get(
       query("favorites").optional().isInt({ min: 0 }),
    ],
    limiter,
+   validate, // this middleware checks if there are any errors using express-validator
    async (req, res, next) => {
       try {
-         // ValidationResult is a function that checks if there are any errors in the query parameters
-         const errors = validationResult(req)
-         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() })
-         }
-
          // after the validation, i can extract the query parameters
          const { page = 1, limit = 10, name, producer, region, favorites } = req.query
 
@@ -48,6 +46,41 @@ wineRouter.get(
 
          res.status(200).send(wines)
       } catch (err) {
+         next(err)
+      }
+   }
+)
+
+//this route returns ALL the wines in order of rating (favoritedBy)
+//if the project grows, i should add a limit to the number of wines that can be returned
+wineRouter.get(
+   "/top-rated",
+   [
+      query("page").isInt({ min: 1 }).withMessage("Page must be a positive integer"),
+      query("limit")
+         .isInt({ min: 1, max: 10 }) // limits the number of wines that can be returned
+         .withMessage("Limit must be a positive integer between 1 and 10"),
+   ],
+   limiter,
+   validate,
+   async (req, res, next) => {
+      try {
+         const { page = 1, limit = 10 } = req.query
+         const skip = (page - 1) * limit
+
+         // this query returns the wines ordered by the number of favorites
+         const wines = await Wine.find()
+            .sort({ favoritedBy: -1 }) // -1 order by descending
+            .skip(skip)
+            .limit(limit)
+
+         // Aggiorna il conteggio totale e le pagine totali
+         const totalDocuments = await Wine.countDocuments() // totalDocuments is used to know how many wines there are in total
+         const totalPages = Math.ceil(totalDocuments / limit) // totalPages is used to know how many pages there are in total
+
+         res.status(200).json({ page, limit, totalPages, data: wines })
+      } catch (err) {
+         console.error("Error fetching top rated wines:", err)
          next(err)
       }
    }

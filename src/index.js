@@ -3,7 +3,7 @@ import bcrypt from "bcrypt"
 import cors from "cors"
 import express from "express"
 import list from "express-list-endpoints"
-import { body, validationResult } from "express-validator"
+import { body } from "express-validator"
 import helmet from "helmet"
 import mongoose from "mongoose"
 import checkJwt from "./middleware/checkJwt.js"
@@ -13,6 +13,7 @@ import { User } from "./models/user.js"
 import generateTokens from "./services/generateTokens.js"
 import jwt from "jsonwebtoken"
 import winesRouter from "./routes/winesRouter.js"
+import validate from "./middleware/isValidationOk.js"
 
 const app = express()
 app.use(helmet())
@@ -39,12 +40,8 @@ app.post(
          })
          .withMessage("Invalid password format"),
    ], //this controls the format of the email and password using express-validator
+   validate, //this middleware checks if there are any errors using express-validator
    async (req, res, next) => {
-      //this if statement checks if there are any errors using express-validator
-      const errors = validationResult(req)
-      if (!errors.isEmpty()) {
-         return res.status(400).json({ errors: errors.array() })
-      }
       try {
          const newUser = await new User({ ...req.body, role: "user" }) //should i add also the other fields that the user is not permitted to change?
          const { accessToken, refreshToken } = generateTokens(newUser._id)
