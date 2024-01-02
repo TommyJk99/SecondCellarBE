@@ -6,9 +6,43 @@ import validate from "../middleware/isValidationOk.js"
 
 const wineRouter = express.Router()
 
-// this route returns all wines in the database efficiently paginated
+// this route returns 100 random wines from the database (homepage) (testing needed)
+wineRouter.get(
+   "/",
+   limiter,
+   [
+      query("page").isInt({ min: 1 }).withMessage("Page must be a positive integer"),
+      query("limit").isInt({ min: 1, max: 100 }).withMessage("Limit must be between 1 and 100"),
+   ],
+   validate, // from isValidationOk.js, it controls if there are any errors in the query parameters above
+   async (req, res, next) => {
+      try {
+         const page = req.query.page // this way or destructuring is the same
+         const limit = req.query.limit
+         const skip = (page - 1) * limit
 
-// this route searches for wines in the database using the query parameters (need other tests)
+         const totalDocuments = await Wine.countDocuments() //does pagination make sense here?
+         const totalPages = Math.ceil(totalDocuments / limit)
+
+         //this is a pipeline,
+         const wines = await Wine.aggregate([
+            { $sample: { size: totalDocuments } },
+            { $skip: skip },
+            { $limit: limit },
+         ])
+
+         res.status(200).json({
+            totalPages: totalPages,
+            currentPage: page,
+            wines: wines,
+         })
+      } catch (err) {
+         next(err)
+      }
+   }
+)
+
+// this route searches for wines in the database using the query parameters (testing needed)
 wineRouter.get(
    "/search",
    // im using express validator "query" to validate the query parameters
@@ -51,7 +85,7 @@ wineRouter.get(
    }
 )
 
-//this route returns ALL the wines in order of rating (favoritedBy)
+//this route returns ALL the wines in order of rating (testing needed)
 //if the project grows, i should add a limit to the number of wines that can be returned
 wineRouter.get(
    "/top-rated",

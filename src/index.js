@@ -84,7 +84,7 @@ app.post("/sign-in", limiter, async (req, res, next) => {
 })
 
 //now I need to create a route for refreshing the access token
-//thist route will be called when i receive an error when trying to access a protected route
+//this route will be called when i receive an error when trying to access a protected route
 //Should I implement an interceptor with axios?
 app.post("/refresh-token", limiter, async (req, res) => {
    //remember to control if the limiter don't block the request
@@ -123,6 +123,16 @@ app.get("/me", limiter, checkJwt, async (req, res, next) => {
    } catch (err) {
       next(err)
    }
+})
+
+//if the user write an invalid path, this route will be called
+app.use("*", (req, res) => {
+   console.error(`404 Error: Path not found - ${req.originalUrl}`)
+
+   res.status(404).json({
+      error: "Not Found",
+      message: "This route does not exist!",
+   })
 })
 
 const port = process.env.PORT || 3030
