@@ -14,11 +14,13 @@ import generateTokens from "./services/generateTokens.js"
 import jwt from "jsonwebtoken"
 import winesRouter from "./routes/winesRouter.js"
 import validate from "./middleware/isValidationOk.js"
+import cookieParser from "cookie-parser"
 
 const app = express()
 app.use(helmet())
 app.use(express.json())
 app.use(cors())
+app.use(cookieParser())
 
 //ROUTES
 app.use("/wines", winesRouter)
@@ -48,6 +50,14 @@ app.post(
 
          newUser.refreshToken = refreshToken
          await newUser.save()
+
+         //i use the cookie because i don't want to send the refresh token in the body of the response
+         res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+         })
 
          res.status(201).send({ accessToken, refreshToken })
       } catch (err) {
