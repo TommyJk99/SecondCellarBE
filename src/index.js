@@ -5,7 +5,7 @@ import express from "express"
 import list from "express-list-endpoints"
 import { body } from "express-validator"
 import helmet from "helmet"
-import mongoose from "mongoose"
+import mongoose, { set } from "mongoose"
 import checkJwt from "./middleware/checkJwt.js"
 import { genericErrorHandler } from "./middleware/genericErrorHandler.js"
 import { limiter } from "./middleware/rateLimit.js"
@@ -15,6 +15,8 @@ import jwt from "jsonwebtoken"
 import winesRouter from "./routes/winesRouter.js"
 import validate from "./middleware/isValidationOk.js"
 import cookieParser from "cookie-parser"
+import setRefreshTokenCookie from "./services/setRefreshTokenCookies.js"
+import usersRouter from "./routes/userRouter.js"
 
 const app = express()
 app.use(helmet())
@@ -24,6 +26,7 @@ app.use(cookieParser())
 
 //ROUTES
 app.use("/wines", winesRouter)
+app.use("/me", usersRouter)
 
 //this route is for registering a new user
 //the password is hashed before saving it to the database (from the user model)
@@ -51,15 +54,10 @@ app.post(
          newUser.refreshToken = refreshToken
          await newUser.save()
 
-         //i use the cookie because i don't want to send the refresh token in the body of the response
-         res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
-         })
+         //this function is used to set the refresh token in the cookies
+         setRefreshTokenCookie(res, refreshToken)
 
-         res.status(201).send({ accessToken, refreshToken })
+         res.status(201).send({ accessToken })
       } catch (err) {
          next(err)
       }
@@ -87,28 +85,30 @@ app.post("/sign-in", limiter, async (req, res, next) => {
       user.refreshToken = refreshToken
       await user.save()
 
-      res.status(200).send({ accessToken, refreshToken })
+      setRefreshTokenCookie(res, refreshToken)
+
+      res.status(200).send({ accessToken })
    } catch (err) {
       next(err)
    }
 })
 
-//now I need to create a route for refreshing the access token
+//this route is for refreshing the access token by the refresh token cookie
 //this route will be called when i receive an error when trying to access a protected route
 //Should I implement an interceptor with axios?
 app.post("/refresh-token", limiter, async (req, res) => {
    //remember to control if the limiter don't block the request
    try {
       //refreshTokenDb is the refresh token that is saved in the database
-      const refreshTokenDb = req.body.refreshToken
-      if (!refreshTokenDb) {
+      const refreshTokenFromCookie = req.cookies.refreshToken
+      if (!refreshTokenFromCookie) {
          return res.status(401).send({ error: "Refresh token is required" })
       }
 
-      const { id } = jwt.verify(refreshTokenDb, process.env.REFRESH_TOKEN_SECRET)
+      const { id } = jwt.verify(refreshTokenFromCookie, process.env.REFRESH_TOKEN_SECRET)
       const user = await User.findById(id)
 
-      if (!user || user.refreshToken !== refreshTokenDb) {
+      if (!user || user.refreshToken !== refreshTokenFromCookie) {
          return res.status(401).send({ error: "Invalid refresh token" })
       }
 
@@ -117,9 +117,37 @@ app.post("/refresh-token", limiter, async (req, res) => {
       user.refreshToken = refreshToken
       await user.save()
 
-      res.send({ accessToken, refreshToken })
+      setRefreshTokenCookie(res, refreshToken)
+
+      res.send({ accessToken })
    } catch (error) {
       res.status(401).send({ error: "Invalid or expired refresh token" })
+   }
+})
+
+// this route is for logging out a user, it will delete the refresh token from the database and the cookie
+app.post("/sign-out", limiter, async (req, res, next) => {
+   try {
+      const refreshTokenFromCookie = req.cookies.refreshToken
+      if (!refreshTokenFromCookie) {
+         return res.status(401).send({ error: "Refresh token is required" })
+      }
+
+      const { id } = jwt.verify(refreshTokenFromCookie, process.env.REFRESH_TOKEN_SECRET)
+      const user = await User.findById(id)
+
+      if (!user || user.refreshToken !== refreshTokenFromCookie) {
+         return res.status(401).send({ error: "Invalid refresh token" })
+      }
+
+      user.refreshToken = ""
+      await user.save()
+
+      res.clearCookie("refreshToken")
+
+      res.send()
+   } catch (error) {
+      next(error)
    }
 })
 
