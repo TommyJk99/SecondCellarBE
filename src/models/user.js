@@ -27,6 +27,10 @@ const UserSchema = new Schema({
       required: [true, "Password is required!"],
       trim: true,
    },
+   profilePicture: {
+      type: String,
+      default: "https://randomuser.me/api/portraits/med/men/14.jpg",
+   },
    address: {
       street: {
          type: String,
