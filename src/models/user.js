@@ -58,10 +58,6 @@ const UserSchema = new Schema({
    transactions: [{ type: Schema.Types.ObjectId, ref: "Transaction" }],
    favorites: [{ type: Schema.Types.ObjectId, ref: "Wine" }],
 
-   refreshToken: {
-      type: String,
-   },
-
    createdAt: {
       type: Date,
       default: Date.now,
