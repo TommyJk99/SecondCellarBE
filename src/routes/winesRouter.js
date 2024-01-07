@@ -1,5 +1,5 @@
 import express from "express"
-import { limiter } from "../middleware/rateLimit.js"
+import { limiter } from "../services/rateLimit.js"
 import { Wine } from "../models/wine.js"
 import { query } from "express-validator"
 import validate from "../middleware/isValidationOk.js"

@@ -7,7 +7,7 @@ import { body } from "express-validator"
 import helmet from "helmet"
 import mongoose from "mongoose"
 import { genericErrorHandler } from "./middleware/genericErrorHandler.js"
-import { limiter } from "./middleware/rateLimit.js"
+import { limiter } from "./services/rateLimit.js"
 import { User } from "./models/user.js"
 import generateTokens from "./services/generateTokens.js"
 import jwt from "jsonwebtoken"
@@ -15,7 +15,7 @@ import winesRouter from "./routes/winesRouter.js"
 import validate from "./middleware/isValidationOk.js"
 import cookieParser from "cookie-parser"
 import setTokenCookies from "./services/setTokenCookies.js"
-import usersRouter from "./routes/userRouter.js"
+import usersRouter from "./routes/usersRouter.js"
 
 const app = express()
 app.use(helmet())
@@ -25,7 +25,7 @@ app.use(cookieParser())
 
 //ROUTES
 app.use("/wines", winesRouter)
-app.use("/me", usersRouter)
+app.use("/users", usersRouter)
 
 //this route is for registering a new user
 //the password is hashed before saving it to the database (from the user model)

@@ -1,18 +1,18 @@
 import express from "express"
 import checkJwt from "../middleware/checkJwt.js"
-import { limiter } from "../middleware/rateLimit.js"
+import { limiter } from "../services/rateLimit.js"
 import { body } from "express-validator"
 import validate from "../middleware/isValidationOk.js"
 import { User } from "../models/user.js"
 import bcrypt from "bcrypt"
 
-const userRouter = express.Router()
+const usersRouter = express.Router()
 
 //All theses routes are protected by the checkJwt middleware and start with /me
 //to access them the user must have a valid access token in the authorization header
 
 //this route returns the user data if the access token is valid
-userRouter.get("/", limiter, checkJwt, async (req, res, next) => {
+usersRouter.get("/me", limiter, checkJwt, async (req, res, next) => {
    if (!req.user) {
       return res.status(404).send({ error: "User not found!" })
    }
@@ -24,8 +24,8 @@ userRouter.get("/", limiter, checkJwt, async (req, res, next) => {
 })
 
 //this route is for updating the user data
-userRouter.put(
-   "/",
+usersRouter.put(
+   "/me",
    limiter,
    checkJwt,
    //these are the validation rules for the user data
@@ -76,4 +76,4 @@ userRouter.put(
    }
 )
 
-export default userRouter
+export default usersRouter
