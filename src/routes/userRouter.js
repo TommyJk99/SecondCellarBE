@@ -1,7 +1,7 @@
 import express from "express"
 import checkJwt from "../middleware/checkJwt.js"
 import { limiter } from "../middleware/rateLimit.js"
-import { body, validationResult } from "express-validator"
+import { body } from "express-validator"
 import validate from "../middleware/isValidationOk.js"
 import { User } from "../models/user.js"
 import bcrypt from "bcrypt"
@@ -46,6 +46,7 @@ userRouter.put(
             return res.status(404).send({ error: "User not found!" })
          }
 
+         // add here the fields that the user is not permitted to change!
          delete req.body.email //the user cannot change the email
          delete req.body.role //the user cannot change the role
 
